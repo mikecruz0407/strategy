@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Chart</title>
+  <style>
+    html, body { margin: 0; padding: 0; background: black; }
+    #chart { width: 100vw; height: 100vh; }
+    #toolbar {
+      position: absolute; top: 10px; left: 10px; z-index: 100;
+      display: flex; gap: 10px;
+    }
+    button {
+      padding: 6px 10px;
+      font-size: 14px;
+      background: #333;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+  <div id="toolbar">
+    <button id="draw">✏️ Draw</button>
+    <button id="erase">🧽 Erase</button>
+  </div>
+  <div id="chart"></div>
+
+  <script src="https://unpkg.com/lightweight-charts/dist/lightweight-charts.standalone.production.js"></script>
+  <script>
+    const chart = LightweightCharts.createChart(document.getElementById('chart'), {
+      layout: { background: { color: 'black' }, textColor: 'lime' },
+      grid: { vertLines: { color: '#222' }, horzLines: { color: '#222' } },
+      timeScale: { timeVisible: true }
+    });
+
+    const candles = chart.addCandlestickSeries({
+      upColor: 'lime', downColor: 'red',
+      wickUpColor: 'lime', wickDownColor: 'red',
+      borderVisible: false
+    });
+
+    const volumes = chart.addHistogramSeries({
+      priceFormat: { type: 'volume' },
+      priceScaleId: '',
+      scaleMargins: { top: 0.8, bottom: 0 }
+    });
+
+    try {
+      const injected = JSON.parse(atob("{{DATA_B64}}"));
+      candles.setData(injected.candles);
+      volumes.setData(injected.volumes);
+    } catch (err) {
+      console.error("Data load failed:", err);
+    }
+
+    let drawMode = false, eraseMode = false, temp = null;
+    let lines = [];
+
+    document.getElementById("draw").onclick = () => {
+      drawMode = true; eraseMode = false;
+    };
+    document.getElementById("erase").onclick = () => {
+      eraseMode = true; drawMode = false;
+    };
+
+    chart.subscribeClick(param => {
+      if (drawMode) {
+        if (!temp) temp = param;
+        else {
+          const line = chart.addLineSeries({ color: 'yellow', lineWidth: 2 });
+          line.setData([
+            { time: temp.time, value: temp.price },
+            { time: param.time, value: param.price }
+          ]);
+          lines.push({ series: line, from: temp.time, to: param.time });
+          temp = null;
+        }
+      } else if (eraseMode) {
+        lines = lines.filter(obj => {
+          if (param.time >= obj.from && param.time <= obj.to) {
+            obj.series.setData([]); return false;
+          }
+          return true;
+        });
+      }
+    });
+  </script>
+</body>
+</html>

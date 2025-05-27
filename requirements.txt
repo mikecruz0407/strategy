@@ -1,0 +1,7 @@
+streamlit~=1.45.1
+yfinance~=0.2.61
+pandas~=2.2.2
+numpy~=1.26.4
+scipy~=1.14.0
+matplotlib~=3.9.1
+plotly  # Optional: only if you're using it in another module
